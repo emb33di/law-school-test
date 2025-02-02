@@ -1,105 +1,86 @@
 import streamlit as st
-from langchain.embeddings.openai import OpenAIEmbeddings
-from langchain.vectorstores import FAISS
-from langchain.chains import RetrievalQA
-from langchain.llms import OpenAI
 
-# Load and store case summaries
-cases = {
-    "Vosburg v. Putney": {
-        "Facts": "A schoolboy lightly kicked another boy, causing an unexpected serious injury due to a pre-existing condition.",
-        "Issue": "Can intent transfer in a battery claim even if there was no intent to cause harm?",
-        "Rule": "Intent to commit an unlawful act is sufficient for battery liability, even if harm was unintended.",
-        "Holding": "Yes, the defendant was liable since the kick was unlawful in the school setting.",
-        "Reasoning": "The court found that an unlawful act (kicking) was enough to establish battery, even if harm was unforeseen."
-    },
-    "Keel v. Hamline": {
-        "Facts": "A classroom eraser fight led to a student being hit unintentionally.",
-        "Issue": "Can intent transfer in battery cases where the harm was unintended?",
-        "Rule": "Intent transfers between participants in a wrongful act, making them all potentially liable.",
-        "Holding": "Yes, liability extended to participants, even if they did not directly cause harm.",
-        "Reasoning": "Courts hold individuals accountable for group wrongful acts under transferred intent doctrine."
-    },
-    "Palsgraf v. Long Island Railroad Co.": {
-        "Facts": "A passenger dropped a package, causing scales to fall and injure another passenger.",
-        "Issue": "Was the railroad liable for injuries caused by an unforeseeable plaintiff?",
-        "Rule": "Negligence requires a duty of care owed to the plaintiff, and harm must be foreseeable.",
-        "Holding": "No, the railroad was not liable because the harm to the plaintiff was unforeseeable.",
-        "Reasoning": "The court emphasized the importance of foreseeability in establishing negligence."
-    },
-    "Donoghue v. Stevenson": {
-        "Facts": "A woman became ill after drinking ginger beer containing a decomposed snail.",
-        "Issue": "Does a manufacturer owe a duty of care to the ultimate consumer?",
-        "Rule": "Manufacturers owe a duty of care to consumers to avoid foreseeable harm.",
-        "Holding": "Yes, the manufacturer was liable for negligence.",
-        "Reasoning": "The court established the principle of duty of care in negligence law."
-    }
-}
 
-# Create FAISS Vector Store
-embedding_model = OpenAIEmbeddings()
+# The VosburgVPutneyAI class from earlier
+class VosburgVPutneyAI:
+    def __init__(self):
+        self.facts = [
+            "Vosburg, a 14-year-old boy, was sitting in a classroom.",
+            "Putney, another student, kicked Vosburg in the leg while sitting on the same bench.",
+            "Vosburg was not immediately injured, but the kick resulted in a serious leg injury.",
+            "The injury occurred due to an underlying condition that was aggravated by the kick."
+        ]
 
-# Store each case element as a separate document with metadata
-documents = []
-metadata = []
-for case_name, case_data in cases.items():
-    for element, text in case_data.items():
-        documents.append(text)
-        metadata.append({"case": case_name, "element": element})
+        self.holding = "The court held that Putney was liable for the injury caused by the intentional act of kicking, even if he did not intend the specific injury."
 
-vectorstore = FAISS.from_texts(documents, embedding_model, metadatas=metadata)
-retriever = vectorstore.as_retriever()
+        self.reasoning = [
+            "The court determined that even though Putney did not intend to cause the specific injury, his intentional act of kicking was sufficient to establish liability.",
+            "The key issue was whether the act was a battery, which the court concluded it was, as the kick was intentional.",
+            "The court held that it was unnecessary to show that the defendant intended the precise harm caused, just the act itself.",
+            "The court emphasized that an intentional act, even without harmful intent, can result in liability.",
+            "The injury to Vosburg was not the result of an accident, but rather an intentional, unlawful act.",
+            "The underlying condition of Vosburg's leg did not absolve Putney of liability; instead, it made the injury more severe.",
+            "The court focused on the general principle of intentional torts and the importance of intent in establishing liability.",
+            "The court found that the law protects individuals from intentional harm, even if the harm caused was unforeseen.",
+            "The case reinforced the rule that intent to commit the tort is the critical element in determining liability in battery cases.",
+            "The court decided that the defendant was fully responsible for the injuries, despite the fact that they were more severe than expected."
+        ]
 
-# Q&A Chain with enhanced prompt
-llm = OpenAI(model_name="gpt-4")
-qa_chain = RetrievalQA.from_chain_type(
-    llm,
-    retriever=retriever,
-    chain_type_kwargs={
-        "prompt": """
-        You are a legal assistant trained to help law students analyze case law. 
-        When answering questions, always:
-        1. Reference the specific case (e.g., Vosburg v. Putney).
-        2. Break down your answer into Facts, Issue, Rule, Holding, and Reasoning.
-        3. Use clear and concise language.
-        """
-    }
-)
+    def generate_brief(self):
+        return {
+            "facts": self.facts,
+            "holding": self.holding,
+            "reasoning": self.reasoning
+        }
 
-def answer_question(query):
-    return qa_chain.run(query)
+    def answer_question(self, question):
+        if "facts" in question.lower():
+            return self.facts
+        elif "holding" in question.lower():
+            return self.holding
+        elif "reasoning" in question.lower():
+            return self.reasoning
+        else:
+            return "I'm sorry, I can only answer questions about the facts, holding, and reasoning of the case."
 
-# Streamlit UI
-st.title("Law Case AI - Case Law Q&A")
-st.write("Ask questions about case law and get detailed answers.")
 
-# Case selection dropdown
-selected_case = st.selectbox("Select a case:", list(cases.keys()))
+# Streamlit app
+st.title("Vosburg v. Putney AI Agent")
+st.write("This agent can answer questions and generate a law school-style brief for the case of Vosburg v. Putney.")
 
-# Display case details
-st.write(f"### {selected_case}")
-st.write("**Facts:**", cases[selected_case]["Facts"])
-st.write("**Issue:**", cases[selected_case]["Issue"])
-st.write("**Rule:**", cases[selected_case]["Rule"])
-st.write("**Holding:**", cases[selected_case]["Holding"])
-st.write("**Reasoning:**", cases[selected_case]["Reasoning"])
+# Initialize the AI agent
+vosburg_case_ai = VosburgVPutneyAI()
 
-# Question input
-query = st.text_input("Enter your question:")
-if query:
-    response = answer_question(query)
-    st.write("### Answer:")
-    st.write(response)
+# Display a dropdown for the user to choose the section they want to learn about
+section_choice = st.selectbox("Select a Section", ["Facts", "Holding", "Reasoning", "Generate Cold Call Brief"])
 
-    # Save question and answer to session state for history
-    if "history" not in st.session_state:
-        st.session_state.history = []
-    st.session_state.history.append({"question": query, "answer": response})
+if section_choice == "Facts":
+    st.subheader("Facts of the Case:")
+    for fact in vosburg_case_ai.facts:
+        st.write(f"• {fact}")
+elif section_choice == "Holding":
+    st.subheader("Holding of the Case:")
+    st.write(f"• {vosburg_case_ai.holding}")
+elif section_choice == "Reasoning":
+    st.subheader("Reasoning Behind the Decision:")
+    for reason in vosburg_case_ai.reasoning:
+        st.write(f"• {reason}")
+elif section_choice == "Generate Cold Call Brief":
+    brief = vosburg_case_ai.generate_brief()
+    st.subheader("Cold Call Brief")
+    st.write("### Facts:")
+    for fact in brief["facts"]:
+        st.write(f"• {fact}")
+    st.write("### Holding:")
+    st.write(f"• {brief['holding']}")
+    st.write("### Reasoning:")
+    for reason in brief["reasoning"]:
+        st.write(f"• {reason}")
 
-# Display question history
-if "history" in st.session_state and st.session_state.history:
-    st.write("### Question History")
-    for i, qa in enumerate(st.session_state.history, 1):
-        st.write(f"**Q{i}:** {qa['question']}")
-        st.write(f"**A{i}:** {qa['answer']}")
-        st.write("---")
+# Add a text input for questions
+question = st.text_input("Ask a question about the case:")
+
+if question:
+    answer = vosburg_case_ai.answer_question(question)
+    st.subheader("Answer:")
+    st.write(answer)
